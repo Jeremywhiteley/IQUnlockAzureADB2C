@@ -1,0 +1,124 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<TrustFrameworkPolicy xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+	xmlns="http://schemas.microsoft.com/online/cpim/schemas/2013/06"
+	PolicySchemaVersion="0.3.0.0"
+	TenantId="iqunlock.onmicrosoft.com"
+	PolicyId="B2C_1A_WebAppMVC1_TrustFrameworkExtensions"
+	PublicPolicyUri="http://iqunlock.onmicrosoft.com/B2C_1A_WebAppMVC1_TrustFrameworkExtensions">
+
+	<BasePolicy>
+		<TenantId>iqunlock.onmicrosoft.com</TenantId>
+		<PolicyId>B2C_1A_TrustFrameworkBase</PolicyId>
+	</BasePolicy>
+
+	<BuildingBlocks>
+		<ClaimsSchema>
+
+			<ClaimType Id="userPermissions">
+				<DisplayName>User Permissions</DisplayName>
+				<DataType>string</DataType>
+				<UserInputType>Readonly</UserInputType>
+			</ClaimType>
+
+			<ClaimType Id="groupId">
+				<DisplayName>Group ID (application)</DisplayName>
+				<DataType>string</DataType>
+				<UserHelpText>Group ID (application)</UserHelpText>
+			</ClaimType>
+
+		</ClaimsSchema>
+	</BuildingBlocks>
+
+	<ClaimsProviders>
+
+		<ClaimsProvider>
+			<DisplayName>Local Account SignIn</DisplayName>
+			<TechnicalProfiles>
+				<TechnicalProfile Id="login-NonInteractive">
+					<Metadata>
+						<Item Key="client_id">e62bfa36-8729-4111-8b87-8141e7507977</Item>
+						<Item Key="IdTokenAudience">7ed67b10-9ff6-4f39-8557-02738c8964ab</Item>
+					</Metadata>
+					<InputClaims>
+						<InputClaim ClaimTypeReferenceId="client_id" DefaultValue="e62bfa36-8729-4111-8b87-8141e7507977" />
+						<InputClaim ClaimTypeReferenceId="resource_id" PartnerClaimType="resource" DefaultValue="7ed67b10-9ff6-4f39-8557-02738c8964ab" />
+					</InputClaims>
+				</TechnicalProfile>
+			</TechnicalProfiles>
+		</ClaimsProvider>
+
+		<ClaimsProvider>
+			<DisplayName>Get user permissions</DisplayName>
+			<TechnicalProfiles>
+				<TechnicalProfile Id="GetUserPermissions">
+					<DisplayName>Retrieves permissions assigned to the user</DisplayName>
+					<Protocol Name="Proprietary" Handler="Web.TPEngine.Providers.RestfulProvider, Web.TPEngine, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
+					<Metadata>
+						<Item Key="ServiceUrl">https://getuserpermissionsfunction20200405181154.azurewebsites.net/api/GetUserPermissions?code=h8tXWAYZ5NiAivCryUDdg2eEK9KPZvT9Y68piVf6IC6N52ktNQMYag==</Item>
+						<Item Key="AuthenticationType">None</Item>
+						<Item Key="SendClaimsIn">QueryString</Item>
+						<Item Key="AllowInsecureAuthInProduction">true</Item>
+					</Metadata>
+					<InputClaims>
+						<InputClaim Required="true" ClaimTypeReferenceId="objectId" />
+						<InputClaim Required="true" ClaimTypeReferenceId="newUser" />
+						<InputClaim Required="true" ClaimTypeReferenceId="groupId" DefaultValue="WebAppMVC1" />
+					</InputClaims>
+					<OutputClaims>
+						<OutputClaim ClaimTypeReferenceId="userPermissions" PartnerClaimType="userPermissions" />
+					</OutputClaims>
+					<UseTechnicalProfileForSessionManagement ReferenceId="SM-Noop" />
+				</TechnicalProfile>
+			</TechnicalProfiles>
+		</ClaimsProvider>
+
+	</ClaimsProviders>
+
+	<UserJourneys>
+
+		<UserJourney Id="SignUpOrSignIn">
+			<OrchestrationSteps>
+
+				<OrchestrationStep Order="1" Type="CombinedSignInAndSignUp" ContentDefinitionReferenceId="api.signuporsignin">
+					<ClaimsProviderSelections>
+						<ClaimsProviderSelection ValidationClaimsExchangeId="LocalAccountSigninEmailExchange" />
+					</ClaimsProviderSelections>
+					<ClaimsExchanges>
+						<ClaimsExchange Id="LocalAccountSigninEmailExchange" TechnicalProfileReferenceId="SelfAsserted-LocalAccountSignin-Email" />
+					</ClaimsExchanges>
+				</OrchestrationStep>
+
+				<OrchestrationStep Order="2" Type="ClaimsExchange">
+					<Preconditions>
+						<Precondition Type="ClaimsExist" ExecuteActionsIf="true">
+							<Value>objectId</Value>
+							<Action>SkipThisOrchestrationStep</Action>
+						</Precondition>
+					</Preconditions>
+					<ClaimsExchanges>
+						<ClaimsExchange Id="SignUpWithLogonEmailExchange" TechnicalProfileReferenceId="LocalAccountSignUpWithLogonEmail" />
+					</ClaimsExchanges>
+				</OrchestrationStep>
+
+				<!-- This step reads any user attributes that we may not have received when in the token. -->
+				<OrchestrationStep Order="3" Type="ClaimsExchange">
+					<ClaimsExchanges>
+						<ClaimsExchange Id="AADUserReadWithObjectId" TechnicalProfileReferenceId="AAD-UserReadUsingObjectId" />
+					</ClaimsExchanges>
+				</OrchestrationStep>
+
+				<OrchestrationStep Order="4" Type="ClaimsExchange">
+					<ClaimsExchanges>
+						<ClaimsExchange Id="GetUserPermissions" TechnicalProfileReferenceId="GetUserPermissions" />
+					</ClaimsExchanges>
+				</OrchestrationStep>
+
+				<OrchestrationStep Order="5" Type="SendClaims" CpimIssuerTechnicalProfileReferenceId="JwtIssuer" />
+
+			</OrchestrationSteps>
+			<ClientDefinition ReferenceId="DefaultWeb" />
+		</UserJourney>
+	</UserJourneys>
+
+</TrustFrameworkPolicy>
